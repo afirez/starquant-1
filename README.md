@@ -42,6 +42,9 @@
 [TOKEN]
 ##掘金token
 gmtoken = xxxxxx
+
+gmtoken = 546a96c2569914040f57456eb72e36a2f297f26c
+
 [ACCOUNT]
 
 ##绑定帐号的交易策略id
@@ -50,9 +53,15 @@ strategy_id= 71878222-a222-222-2222-5811220c517b
 ##绑定帐号的交易策略id
 backtest_strategy_id= 71878222-a222-222-2222-5811220c517b
 
+backtest_strategy_id= 7618fe5b-c6f7-11ed-8a6e-001c4283d0c8
+
 ##指定连接数据库信息
 [DATABASE]
 tradedb = mysql+mysqlconnector://root:111111@localhost:3306/starquant
+
+tradedb = mysql+mysqlconnector://root:123456@localhost:3306/stockdb
+
+tradedb = mysql+pymysql://root:123456@192.168.31.17:3306/stockdb
 
 ##掘金客户端安装路径
 [GOLDMINER]
@@ -66,21 +75,25 @@ path =D:\Goldminer3\Hongshu Goldminer3\goldminer3.exe
   - 运行脚本数据库表：
 ```
     mysql -uroot -p111111 stockdb <  /iqunat/data/iquantdb.sql
-```
-3. 修改setting表中，帐号ID字段值为你掘金创建的模拟交易帐号ID
 
-4. 交易标的股票代码设置：
+    docker cp ./data/iquantdb.sql mysql:/iquantdb.sql
+    docker exec -it mysql bash
+    mysql -uroot -p123456 stockdb < /iquantdb.sql
+```
+1. 修改setting表中，帐号ID字段值为你掘金创建的模拟交易帐号ID
+
+2. 交易标的股票代码设置：
 
     修改代码文件  starquant\quant\quantengine.py 可添加交易标的股票代码
 
-5. 回测入口
+3. 回测入口
 
     运行
 ```
 python starquant\quant\startengine_bt.py
 ```
 
-6. 实盘交易入口
+1. 实盘交易入口
 
 运行
 ```

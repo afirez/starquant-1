@@ -49,14 +49,14 @@ class StockPool(Base):
     # 获取股票dataframe
     def getPositionStock(self):
         engine = create_engine(self.__connectString__)
-        df = pd.read_sql("SELECT * FROM pick_time WHERE strategy='by_holding'", con=engine)
+        df = pd.read_sql("SELECT * FROM pick_time WHERE strategy='by_holding'", con=engine.connect())
         engine.dispose()
         return df
 
     # 获取股票dataframe
     def getStock(self):
         engine = create_engine(self.__connectString__)
-        df = pd.read_sql('select * from pick_time', con=engine)
+        df = pd.read_sql('select * from pick_time', con=engine.connect())
         engine.dispose()
         return df
 
@@ -64,7 +64,7 @@ class StockPool(Base):
     # 获取股票通过代码
     def get_stock_by_code(self, code):
         engine = create_engine(self.__connectString__)
-        df = pd.read_sql("select * from pick_time WHERE CODE='{}'".format(code), con=engine)
+        df = pd.read_sql("select * from pick_time WHERE CODE='{}'".format(code), con=engine.connect())
         engine.dispose()
         return df
 
@@ -120,7 +120,7 @@ class StockPool(Base):
 
     def get_picktime(self):
         engine = create_engine(self.__connectString__)
-        df = pd.read_sql("select * from {} WHERE rating='{}'".format(self.__tablename__, "买入"), con=engine)
+        df = pd.read_sql("select * from {} WHERE rating='{}'".format(self.__tablename__, "买入"), con=engine.connect())
         engine.dispose()
         return df
 
@@ -131,7 +131,7 @@ class StockPool(Base):
         # 创建session对象
         session = DBSession()
         query = session.query(StockPool).filter(StockPool.symbol.in_(symbols))
-        df = pd.read_sql(query.statement, engine)
+        df = pd.read_sql(query.statement, con=engine.connect())
         session.commit()
         engine.dispose()
         df.sort_values(by='date')

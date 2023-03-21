@@ -10,7 +10,7 @@ from datetime import datetime
 import datacompy
 from quant.util import stringutil
 from quant.util.configutil import get_config
-from sqlalchemy import Column, Integer, String, create_engine,DateTime,Float,DECIMAL
+from sqlalchemy import Column, Integer, String, create_engine,DateTime,Float,DECIMAL, text
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 import pandas as pd
@@ -64,7 +64,8 @@ class Order(Base):
     #获取完成交订单
     def get_unfinished_order(self,account_id,date):
         engine = create_engine(self.__connectString__)
-        df = pd.read_sql("SELECT a.* FROM `order` a,(SELECT symbol,SUM(volume*side) vol FROM `order`  WHERE account_id='{}' AND trade_time<='{}' group by symbol  HAVING vol>0) b WHERE a.account_id='{}' AND a.symbol=b.symbol AND a.volume=b.vol AND a.side=1 AND a.trade_time<='{}' order BY trade_time desc".format(account_id,date,account_id,date), con=engine)
+        sql = "SELECT a.* FROM `order` a,(SELECT symbol,SUM(volume*side) vol FROM `order`  WHERE account_id='{}' AND trade_time<='{}' group by symbol  HAVING vol>0) b WHERE a.account_id='{}' AND a.symbol=b.symbol AND a.volume=b.vol AND a.side=1 AND a.trade_time<='{}' order BY trade_time desc".format(account_id,date,account_id,date)
+        df = pd.read_sql(text(sql), con=engine.connect())
         df.drop_duplicates(subset=['symbol'],inplace=True)
         engine.dispose()
         return df
@@ -88,7 +89,7 @@ class Order(Base):
             where = where + " account_id='{}'".format(account_id)
         if where!='':
             where=" where {}".format(where)
-        df=pd.read_sql("select * from `{}` {}".format(self.__tablename__,where),con=engine)
+        df=pd.read_sql("select * from `{}` {}".format(self.__tablename__,where),con=engine.connect())
         engine.dispose()
         return df
 
@@ -115,7 +116,7 @@ class Order(Base):
         # 创建session对象:
         session = DBSession()
         query = session.query(Order).filter(Order.account_id == account_id).filter(Order.side == 1).filter(Order.symbol.in_(symbols))
-        df = pd.read_sql(query.statement, engine)
+        df = pd.read_sql(query.statement, con=engine.connect())
         df.sort_values(by='trade_time',ascending=False,inplace=True)
         df.drop_duplicates(subset='symbol',inplace=True)
         engine.dispose()
@@ -227,22 +228,22 @@ class Order(Base):
     # 获取某天交易记录
     def get_day_trade_record(self,account_id='59ae65ad-c062-11ec-bde8-00163e0a4100',date=datetime.now().strftime('%Y-%m-%d')):
         engine = create_engine(self.__connectString__)
-        df_sellout = pd.read_sql("SELECT * FROM `order` WHERE account_id='{}' and trade_date='{}';".format(account_id,date), con=engine)
+        df_sellout = pd.read_sql("SELECT * FROM `order` WHERE account_id='{}' and trade_date='{}';".format(account_id,date), con=engine.connect())
         return df_sellout
 
     def get_day_sellout_stock(self,account_id='59ae65ad-c062-11ec-bde8-00163e0a4100',date=datetime.now().strftime('%Y-%m-%d')):
         engine = create_engine(self.__connectString__)
-        df_sellout = pd.read_sql("SELECT symbol,cast(SUM(side*volume) AS signed) as volume  FROM `myorder` WHERE STATUS=3 AND account_id='{}' AND symbol IN (SELECT symbol FROM myorder WHERE STATUS=3 AND side=-1 AND account_id='{}' AND trade_date='{}') GROUP BY symbol HAVING volume=0 order BY volume;".format(account_id,account_id,date), con=engine)
+        df_sellout = pd.read_sql("SELECT symbol,cast(SUM(side*volume) AS signed) as volume  FROM `myorder` WHERE STATUS=3 AND account_id='{}' AND symbol IN (SELECT symbol FROM myorder WHERE STATUS=3 AND side=-1 AND account_id='{}' AND trade_date='{}') GROUP BY symbol HAVING volume=0 order BY volume;".format(account_id,account_id,date), con=engine.connect())
         return df_sellout
 
     # 每天清仓股票统计
     def get_day_sellout_profit(self,account_id='59ae65ad-c062-11ec-bde8-00163e0a4100',date=datetime.now().strftime('%Y-%m-%d')):
         df_sellout = self.get_day_sellout_stock(account_id=account_id, date=date)
         engine = create_engine(self.__connectString__)
-        df = pd.read_sql("SELECT * FROM `order` WHERE STATUS=3 AND account_id='{}' AND trade_date<='{}'".format(account_id, date), con=engine)
+        df = pd.read_sql("SELECT * FROM `order` WHERE STATUS=3 AND account_id='{}' AND trade_date<='{}'".format(account_id, date), con=engine.connect())
         symbols=stringutil.array_to_string(df_sellout['symbol'].values)
         symbols="'{}'".format(symbols.replace(',',"','"))
-        df_sell=pd.read_sql("SELECT symbol,cast(SUM(side*volume) AS signed) as volume  FROM `order` WHERE STATUS=3 AND side=-1 AND account_id='{}' AND symbol IN ({}) AND trade_date='{}' GROUP BY symbol order BY volume;".format(account_id,symbols, date), con=engine)
+        df_sell=pd.read_sql("SELECT symbol,cast(SUM(side*volume) AS signed) as volume  FROM `order` WHERE STATUS=3 AND side=-1 AND account_id='{}' AND symbol IN ({}) AND trade_date='{}' GROUP BY symbol order BY volume;".format(account_id,symbols, date), con=engine.connect())
         engine.dispose()
 
         df_out = df.loc[df.symbol.isin(df_sellout.symbol) & (df['side'] == 1), :].copy()
@@ -305,7 +306,7 @@ class Order(Base):
         # 创建session对象
         session = DBSession()
         query = session.query(Order).filter(Order.account_id==account_id).filter(Order.symbol.in_(symbols))
-        df = pd.read_sql(query.statement, engine)
+        df = pd.read_sql(query.statement, con=engine.connect())
         session.commit()
         engine.dispose()
         return df
@@ -317,7 +318,7 @@ class Order(Base):
         # 创建session对象
         session = DBSession()
         query = session.query(Order).filter(Order.account_id==account_id).filter(Order.symbol.in_(symbols))
-        df = pd.read_sql(query.statement, engine)
+        df = pd.read_sql(query.statement, con=engine.connect())
         session.commit()
         engine.dispose()
         df.sort_values(by='trade_time')
@@ -338,7 +339,7 @@ class Order(Base):
             where=where+" and trade_time<='{}'".format(end)
         if where!='':
             where=' where {}'.format(where)
-        df=pd.read_sql("select * from `{}` {}".format(self.__tablename__,where),con=engine)
+        df=pd.read_sql("select * from `{}` {}".format(self.__tablename__,where),con=engine.connect())
         engine.dispose()
         df_buy=df.loc[df['side']==1,:]
         df_buy=df_buy.groupby(['trade_date']).sum(['amount', 'volume'])
@@ -364,9 +365,9 @@ class Order(Base):
         #     where=where+" and trade_time<='{}'".format(end)
         # if where!='':
         #     where=' where {}'.format(where)
-        # df=pd.read_sql("SELECT account_id,COUNT(*) AS cnt FROM trade_record GROUP BY account_id {}".format(where),con=engine)
+        # df=pd.read_sql("SELECT account_id,COUNT(*) AS cnt FROM trade_record GROUP BY account_id {}".format(where),con=engine.connect())
         df = pd.read_sql("SELECT account_id,COUNT(*) AS cnt FROM `{}` GROUP BY account_id ".format(self.__tablename__),
-                         con=engine)
+                         con=engine.connect())
         engine.dispose()
         return df
     # 获取最多交易记录帐号

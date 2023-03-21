@@ -98,9 +98,9 @@ class MyOrder(Base):
     # 获取清仓股票
     def get_sellout_profit(self,account_id='59ae65ad-c062-11ec-bde8-00163e0a4100',start='2022-09-27',end='2022-09-29'):
         engine = create_engine(self.__connectString__)
-        df_sellout = pd.read_sql("SELECT symbol,cast(SUM(side*volume) AS signed) as volume  FROM `myorder` WHERE STATUS=3 AND account_id='{}' AND trade_date>='{}' AND trade_date<='{}' GROUP BY symbol HAVING volume=0 order BY volume;".format(account_id,start,end), con=engine)
+        df_sellout = pd.read_sql("SELECT symbol,cast(SUM(side*volume) AS signed) as volume  FROM `myorder` WHERE STATUS=3 AND account_id='{}' AND trade_date>='{}' AND trade_date<='{}' GROUP BY symbol HAVING volume=0 order BY volume;".format(account_id,start,end), con=engine.connect())
 
-        df=pd.read_sql("SELECT * FROM `myorder` WHERE STATUS=3 AND account_id='{}' AND trade_date>='{}' AND trade_date<='{}'".format(account_id,start,end), con=engine)
+        df=pd.read_sql("SELECT * FROM `myorder` WHERE STATUS=3 AND account_id='{}' AND trade_date>='{}' AND trade_date<='{}'".format(account_id,start,end), con=engine.connect())
         df_stock= df.loc[df['symbol'].isin(df_sellout['symbol'].values), :].copy()
         # engine.dispose()
         df_stock=df_stock.groupby(by=['symbol']).apply(lambda x:-(x['side']*x['volume']*x['price']).sum())
@@ -115,17 +115,17 @@ class MyOrder(Base):
 
     def get_day_sellout_stock(self,account_id='59ae65ad-c062-11ec-bde8-00163e0a4100',date=datetime.now().strftime('%Y-%m-%d')):
         engine = create_engine(self.__connectString__)
-        df_sellout = pd.read_sql("SELECT symbol,cast(SUM(side*volume) AS signed) as volume  FROM `myorder` WHERE STATUS=3 AND account_id='{}' AND symbol IN (SELECT symbol FROM myorder WHERE STATUS=3 AND side=-1 AND account_id='{}' AND trade_date='{}') GROUP BY symbol HAVING volume=0 order BY volume;".format(account_id,account_id,date), con=engine)
+        df_sellout = pd.read_sql("SELECT symbol,cast(SUM(side*volume) AS signed) as volume  FROM `myorder` WHERE STATUS=3 AND account_id='{}' AND symbol IN (SELECT symbol FROM myorder WHERE STATUS=3 AND side=-1 AND account_id='{}' AND trade_date='{}') GROUP BY symbol HAVING volume=0 order BY volume;".format(account_id,account_id,date), con=engine.connect())
         return df_sellout
         # print(df_sellout)
 
     def get_day_sellout_profit(self,account_id='59ae65ad-c062-11ec-bde8-00163e0a4100',date=datetime.now().strftime('%Y-%m-%d')):
         df_sellout = self.get_day_sellout_stock(account_id=account_id, date=date)
         engine = create_engine(self.__connectString__)
-        df = pd.read_sql("SELECT * FROM `myorder` WHERE STATUS=3 AND account_id='{}' AND trade_date<='{}'".format(account_id, date), con=engine)
+        df = pd.read_sql("SELECT * FROM `myorder` WHERE STATUS=3 AND account_id='{}' AND trade_date<='{}'".format(account_id, date), con=engine.connect())
         symbols=stringutil.array_to_string(df_sellout['symbol'].values)
         symbols="'{}'".format(symbols.replace(',',"','"))
-        df_sell=pd.read_sql("SELECT symbol,cast(SUM(side*volume) AS signed) as volume  FROM `myorder` WHERE STATUS=3 AND side=-1 AND account_id='{}' AND symbol IN ({}) AND trade_date='{}' GROUP BY symbol order BY volume;".format(account_id,symbols, date), con=engine)
+        df_sell=pd.read_sql("SELECT symbol,cast(SUM(side*volume) AS signed) as volume  FROM `myorder` WHERE STATUS=3 AND side=-1 AND account_id='{}' AND symbol IN ({}) AND trade_date='{}' GROUP BY symbol order BY volume;".format(account_id,symbols, date), con=engine.connect())
         engine.dispose()
 
         df_out = df.loc[df.symbol.isin(df_sellout.symbol) & (df['side'] == 1), :].copy()
@@ -154,9 +154,9 @@ class MyOrder(Base):
         #     where=where+" and trade_time<='{}'".format(end)
         # if where!='':
         #     where=' where {}'.format(where)
-        # df=pd.read_sql("SELECT account_id,COUNT(*) AS cnt FROM trade_record GROUP BY account_id {}".format(where),con=engine)
+        # df=pd.read_sql("SELECT account_id,COUNT(*) AS cnt FROM trade_record GROUP BY account_id {}".format(where),con=engine.connect())
         df = pd.read_sql("SELECT account_id,COUNT(*) AS cnt FROM {} GROUP BY account_id ".format(self.__tablename__),
-                         con=engine)
+                         con=engine.connect())
         engine.dispose()
         return df
 

@@ -42,7 +42,7 @@ class Setting(Base):
     # 获取所有帐号设置
     def get_all_data(self):
         engine = create_engine(self.__connectString__)
-        df=pd.read_sql("select * from setting",con=engine)
+        df=pd.read_sql("select * from setting",con=engine.connect().connect())
         engine.dispose()
         return df
 
@@ -98,8 +98,8 @@ class Setting(Base):
     # 获取当天发生的交易帐号
     def get_trade_account(self,date):
         engine = create_engine(self.__connectString__)
-        # df=pd.read_sql("SELECT * FROM setting WHERE account_id IN (SELECT DISTINCT account_id FROM `order` WHERE trade_date='{}')".format(date),con=engine)
-        df = pd.read_sql("SELECT * FROM setting ", con=engine)
+        # df=pd.read_sql("SELECT * FROM setting WHERE account_id IN (SELECT DISTINCT account_id FROM `order` WHERE trade_date='{}')".format(date),con=engine.connect().connect())
+        df = pd.read_sql("SELECT * FROM setting ", con=engine.connect())
         engine.dispose()
         return df
 if __name__ == '__main__':

@@ -75,7 +75,7 @@ class TradeRecord(Base):
             where = where + " account_id='{}'".format(acount)
         if where!='':
             where=" where {}".format(where)
-        df=pd.read_sql("select * from trade_record {}".format(where),con=engine)
+        df=pd.read_sql("select * from trade_record {}".format(where),con=engine.connect())
         engine.dispose()
         return df
     # 获取单个股票交易记录
@@ -88,7 +88,7 @@ class TradeRecord(Base):
             where=where+" and trade_time<='{}'".format(end)
         if where!='':
             where=' where {}'.format(where)
-        df=pd.read_sql("select * from trade_record {}".format(where),con=engine)
+        df=pd.read_sql("select * from trade_record {}".format(where),con=engine.connect())
         engine.dispose()
         return df
     # 获取单个股票交易记录
@@ -96,7 +96,7 @@ class TradeRecord(Base):
         ret=False
         engine = create_engine(self.__connectString__)
         where="where symbol='{}' and trade_time='{}' and amount={} ".format(symbol,trade_time,amount)
-        df=pd.read_sql("select * from trade_record {}".format(where),con=engine)
+        df=pd.read_sql("select * from trade_record {}".format(where),con=engine.connect())
         engine.dispose()
         if len(df)>0:
             ret=True
@@ -105,7 +105,7 @@ class TradeRecord(Base):
     def getAccount(self):
         engine = create_engine(self.__connectString__)
         df = pd.read_sql("SELECT account_id,COUNT(*) AS cnt FROM trade_record GROUP BY account_id ",
-                         con=engine)
+                         con=engine.connect())
         engine.dispose()
         return df
 
@@ -127,7 +127,7 @@ class TradeRecord(Base):
             where=where+" and trade_time<='{}'".format(end)
         if where!='':
             where=' where {}'.format(where)
-        df=pd.read_sql("select * from trade_record {}".format(where),con=engine)
+        df=pd.read_sql("select * from trade_record {}".format(where),con=engine.connect())
         engine.dispose()
         df_buy=df.loc[df['side']==1,:]
         df_buy=df_buy.groupby(['trade_date']).sum(['amount', 'volume'])

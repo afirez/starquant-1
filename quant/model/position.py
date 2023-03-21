@@ -91,14 +91,14 @@ class Position(Base):
     # 获取股票池股票
     def get_all_stock(self):
         engine = create_engine(self.__connectString__)
-        df=pd.read_sql('select * from {}'.format(self.__tablename__),con=engine)
+        df=pd.read_sql('select * from {}'.format(self.__tablename__),con=engine.connect())
         engine.dispose()
         return df
 
     # 获取股票池股票
     def get_stock_by_code(self,code):
         engine = create_engine(self.__connectString__)
-        df=pd.read_sql("SELECT * FROM {} WHERE CODE='{}' ".format(self.__tablename__,code),con=engine)
+        df=pd.read_sql("SELECT * FROM {} WHERE CODE='{}' ".format(self.__tablename__,code),con=engine.connect())
         engine.dispose()
         return df
 
@@ -118,7 +118,7 @@ class Position(Base):
             where = where + " seldate<='{}'".format(end)
         if where != '':
             where = ' where {}'.format(where)
-        df = pd.read_sql("select * from {} {}".format(self.__tablename__,where), con=engine)
+        df = pd.read_sql("select * from {} {}".format(self.__tablename__,where), con=engine.connect())
         engine.dispose()
         return df
 
@@ -199,7 +199,7 @@ class Position(Base):
         # 创建session对象
         session = DBSession()
         query = session.query(Position).filter(Position.account_id==account_id).filter(Position.symbol.in_(symbols))
-        df = pd.read_sql(query.statement, engine)
+        df = pd.read_sql(query.statement, con=engine.connect())
         session.commit()
         engine.dispose()
         df.set_index('symbol',inplace=True)
@@ -210,15 +210,15 @@ class Position(Base):
     # 获取本地数据持仓数据
     def get_local_position(self,account_id='59ae65ad-c062-11ec-bde8-00163e0a4100'):
         engine = create_engine(self.__connectString__)
-        df_pos = pd.read_sql("SELECT * FROM `position` WHERE account_id='{}'".format(account_id), con=engine)
+        df_pos = pd.read_sql("SELECT * FROM `position` WHERE account_id='{}'".format(account_id), con=engine.connect())
         engine.dispose()
         return df_pos
 
     # 检查持仓是否和交易记录一致
     def check_position_data(self,account_id='59ae65ad-c062-11ec-bde8-00163e0a4100'):
         engine = create_engine(self.__connectString__)
-        df_ord = pd.read_sql("SELECT symbol,cast(SUM(side*volume) AS signed) AS volume  FROM `myorder` WHERE STATUS=3 AND account_id='{}' GROUP BY symbol HAVING volume>0 order BY volume".format(account_id), con=engine)
-        df_pos = pd.read_sql("SELECT * FROM `position` WHERE account_id='{}'".format(account_id), con=engine)
+        df_ord = pd.read_sql("SELECT symbol,cast(SUM(side*volume) AS signed) AS volume  FROM `myorder` WHERE STATUS=3 AND account_id='{}' GROUP BY symbol HAVING volume>0 order BY volume".format(account_id), con=engine.connect())
+        df_pos = pd.read_sql("SELECT * FROM `position` WHERE account_id='{}'".format(account_id), con=engine.connect())
         engine.dispose()
 
         # df_ord = df_ord.loc[:, ['symbol', 'volume']]

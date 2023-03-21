@@ -7,7 +7,7 @@
 ###############################################################################
 #
 from datetime import datetime
-from sqlalchemy import Column, Integer, String, create_engine,DateTime,Float,DECIMAL
+from sqlalchemy import Column, Integer, String, create_engine,DateTime,Float,DECIMAL, text
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 import pandas as pd
@@ -70,7 +70,7 @@ class ExecutionReport(Base):
             where = where + " account_id='{}'".format(acount)
         if where!='':
             where=" where {}".format(where)
-        df=pd.read_sql("select * from {} {}".format(self.__tablename__,where),con=engine)
+        df=pd.read_sql("select * from {} {}".format(self.__tablename__,where),con=engine.connect())
         engine.dispose()
         return df
     # 获取单个股票交易记录
@@ -83,7 +83,7 @@ class ExecutionReport(Base):
             where=where+" and trade_time<='{}'".format(end)
         if where!='':
             where=' where {}'.format(where)
-        df=pd.read_sql("select * from {} {}".format(self.__tablename__,where),con=engine)
+        df=pd.read_sql("select * from {} {}".format(self.__tablename__,where),con=engine.connect())
         engine.dispose()
         return df
     # 获取单个股票交易记录
@@ -91,7 +91,8 @@ class ExecutionReport(Base):
         ret=False
         engine = create_engine(self.__connectString__)
         where="where symbol='{}' and trade_time='{}' and amount={} ".format(symbol,trade_time,amount)
-        df=pd.read_sql("select * from trade_record {}".format(where),con=engine)
+        sql = "select * from trade_record {}".format(where)
+        df=pd.read_sql(text(sql),con=engine.connect())
         engine.dispose()
         if len(df)>0:
             ret=True
@@ -106,9 +107,9 @@ class ExecutionReport(Base):
         #     where=where+" and trade_time<='{}'".format(end)
         # if where!='':
         #     where=' where {}'.format(where)
-        # df=pd.read_sql("SELECT account_id,COUNT(*) AS cnt FROM trade_record GROUP BY account_id {}".format(where),con=engine)
+        # df=pd.read_sql("SELECT account_id,COUNT(*) AS cnt FROM trade_record GROUP BY account_id {}".format(where),con=engine.connect())
         df = pd.read_sql("SELECT account_id,COUNT(*) AS cnt FROM trade_record GROUP BY account_id ",
-                         con=engine)
+                         con=engine.connect())
         engine.dispose()
         return df
 
@@ -130,7 +131,7 @@ class ExecutionReport(Base):
             where=where+" and trade_time<='{}'".format(end)
         if where!='':
             where=' where {}'.format(where)
-        df=pd.read_sql("select * from trade_record {}".format(where),con=engine)
+        df=pd.read_sql("select * from trade_record {}".format(where),con=engine.connect())
         engine.dispose()
         df_buy=df.loc[df['side']==1,:]
         df_buy=df_buy.groupby(['trade_date']).sum(['amount', 'volume'])
